@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -48,6 +49,44 @@ public class CNLFront extends JavaPlugin{
 		return global;
 	}
 	
+	public List<Channel> getPlayerChannels(String playerUUID) {
+		List<Channel> channels = new ArrayList<Channel>();
+		
+		for(int i = 0; i < this.channels.size(); i++) {
+			for(int j = 0; j < this.channels.get(i).getPlayers().size(); j++) {
+				if(this.channels.get(i).getPlayers().get(j).getUniqueId().toString().equalsIgnoreCase(playerUUID)) {
+					channels.add(this.channels.get(i));
+				}
+			}
+		}
+		
+		return channels;
+	}
+	
+	public boolean playerIsInChannel(String playerUUID, Channel channel) {
+		List<Channel> playerChans = getPlayerChannels(playerUUID);
+		for(int i = 0; i < playerChans.size(); i++) {
+			if(playerChans.get(i) == channel) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	public void switchChan(Player player, Channel channel) {
+		String playerUUID = player.getUniqueId().toString();
+		List<Channel> playerChans = getPlayerChannels(playerUUID);
+		if(playerIsInChannel(playerUUID, channel)) {
+			player.sendMessage("You are already in the " + channel.getName() + " channel.");
+		} else {
+			for(int i = 0; i < playerChans.size(); i++) {
+				playerChans.get(i).removePlayer(player);
+			}
+			channel.addPlayer(player);
+			player.sendMessage("Switched to " + channel.getName() + " successfully.");
+		}
+	}
+	
 	public Channel getChannel(String name) {
 		for(int i = 0; i < channels.size(); i++) {
 			if(channels.get(i).getName().equalsIgnoreCase(name)) {
@@ -78,7 +117,16 @@ public class CNLFront extends JavaPlugin{
 		
 		@EventHandler
 		public void onAsyncPlayerChatEvent(AsyncPlayerChatEvent event) {
-			getPlayerChannel(event.getPlayer()).runMessage(event.getPlayer(), event.getMessage());
+			Player player = event.getPlayer();
+			String playerUUID = player.getUniqueId().toString();
+			String message = event.getMessage();
+			List<Channel> playerChans = getPlayerChannels(playerUUID);
+			for(int i = 0; i < playerChans.size(); i++) {
+				Channel currentChan = playerChans.get(i);
+				for(int j = 0; j < currentChan.getPlayers().size(); j++) {
+					currentChan.getPlayers().get(j).sendMessage(ChatColor.GREEN + "[" + currentChan.getName().charAt(0) + "] " + player.getDisplayName() + ChatColor.RESET + ChatColor.BOLD + ">> " + ChatColor.RESET + message);
+				}
+			}
 		}
 		
 	}
@@ -91,60 +139,45 @@ public class CNLFront extends JavaPlugin{
 				sndr.sendMessage("This command can not be executed by console personnel. Please try again in-game.");
 			} else {
 				Player player = (Player) sndr;
-				player.sendMessage("Error message 1");
+				String playerUUID = player.getUniqueId().toString();
 				switch(cmd.getName()) {
 				case "channel":
-					player.sendMessage("Error message 2");
 					if(args.length < 1) {
-//						INSERT HELP MENU COMMAND
+//						DISPLAY HELP MENU
 					} else {
-						player.sendMessage("Error message 3");
-						if(getChannel(args[0]) == null) {
-							player.sendMessage("Invalid channel name");
-						} else {
-							
-							player.sendMessage("Checking channel for player list.");
-							
-							Channel playerChannel = getPlayerChannel(player);
-							
-							Channel argedChan = getChannel(args[0]);
-							
-							if(argedChan.getPlayers().contains(player)) {
-								player.sendMessage("You are alread in " + argedChan.getName());
+						switch(args[0].toLowerCase()) {
+						case "status":
+							player.sendMessage("You are in the following channels:");
+							List<Channel> playerChans = getPlayerChannels(playerUUID);
+							for(int i = 0; i < playerChans.size(); i++) {
+								player.sendMessage(playerChans.get(i).getName());
+							}
+							break;
+						case "switch":
+							if(args.length < 2) {
+//								DISPLAY SWITCH HELP MENU
 							} else {
-								playerChannel.removePlayer(player);
-								if(playerChannel.getPlayers().contains(player)) {
-									player.sendMessage("Player leave failed.");
-								} else {
-									player.sendMessage("Player leave successful.");
-								}
-								argedChan.addPlayer(player);
-								if(argedChan.getPlayers().contains(player)) {
-									player.sendMessage("Player add successful.");
-								} else {
-									player.sendMessage("Player add failed.");
+								switch(args[1].toLowerCase()) {
+								case "global":
+									switchChan(player, global);
+									break;
+								case "local":
+									switchChan(player, local);
+									break;
+								case "team1":
+									switchChan(player, teamOne);
+									break;
+								case "teamtwo":
+									switchChan(player, teamTwo);
+									break;
+								default:
+//									DISPLAY LIST OF CHANNELS
+									break;
 								}
 							}
-							
-//							player.sendMessage("Error message 444444444");
-//							Channel playerChannel = getPlayerChannel(player);
-//							if(getChannel(args[0]).getPlayers().contains(player)) {
-//								player.sendMessage("You are already in " + getChannel(args[0]).getName());
-//							} else {
-//								playerChannel.removePlayer(player);
-//								if(playerChannel.getPlayers().contains(player)) {
-//									player.sendMessage("Oops! You're still in the " + playerChannel.getName() + " channel!");
-//								} else {
-//									player.sendMessage("You've left the " + playerChannel.getName() + " channel.");
-//								}
-//								Channel newChannel = getChannel(args[0]);
-//								newChannel.addPlayer(player);
-//								if(newChannel.getPlayers().contains(player)) {
-//									player.sendMessage("You've successfully switched to the " + newChannel.getName() + " channel.");
-//								} else {
-//									player.sendMessage("Uh oh, it looks like you haven't been able to successfully switch to the " + newChannel.getName() + " channel.");
-//								}
-//							}
+							break;
+						default:
+//							DISPLAY HELP MENU
 						}
 					}
 				}
