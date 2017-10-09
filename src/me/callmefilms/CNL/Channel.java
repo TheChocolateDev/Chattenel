@@ -34,9 +34,7 @@ public class Channel {
 	
 	public void removePlayer(Player player) {
 		if(getPlayers().contains(player)) {
-			this.players.remove(this.players.indexOf(player));
-		} else {
-			return;
+			this.getPlayers().remove(player);
 		}
 	}
 	
